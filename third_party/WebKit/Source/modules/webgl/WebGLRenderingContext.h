@@ -83,6 +83,7 @@ private:
     Member<OESStandardDerivatives> m_oesStandardDerivatives;
     Member<OESVertexArrayObject> m_oesVertexArrayObject;
     Member<OESElementIndexUint> m_oesElementIndexUint;
+    Member<OESEGLImageExternal> m_oesEGLImageExternal;
     Member<WebGLLoseContext> m_webglLoseContext;
     Member<WebGLDebugRendererInfo> m_webglDebugRendererInfo;
     Member<WebGLDebugShaders> m_webglDebugShaders;

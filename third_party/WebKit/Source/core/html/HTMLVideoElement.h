@@ -69,6 +69,9 @@ public:
     // Used by canvas to gain raw pixel access
     void paintCurrentFrame(SkCanvas*, const IntRect&, const SkPaint*) const;
 
+    // Used by WebGL to do GPU-GPU textures bind if possible.
+    bool bindVideoTextureToPlatformTexture(gpu::gles2::GLES2Interface*, GLuint texture);
+
     // Used by WebGL to do GPU-GPU textures copy if possible.
     bool copyVideoTextureToPlatformTexture(gpu::gles2::GLES2Interface*, GLuint texture, GLenum internalFormat, GLenum type, bool premultiplyAlpha, bool flipY);
 

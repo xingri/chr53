@@ -86,6 +86,9 @@ int WebGLTexture::mapTargetToIndex(GLenum target) const
         case GL_TEXTURE_CUBE_MAP_NEGATIVE_Z:
             return 5;
         }
+    } else if (m_target == GL_TEXTURE_EXTERNAL_OES) {
+        if (target == GL_TEXTURE_EXTERNAL_OES)
+            return 0;
     } else if (m_target == GL_TEXTURE_3D) {
         if (target == GL_TEXTURE_3D)
             return 0;

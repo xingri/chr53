@@ -49,6 +49,7 @@ class ScriptWrappable;
     V(webglBuffers) \
     V(webglCubeMapTextures) \
     V(webglExtensions) \
+    V(webglExternalOESTextures) \
     V(webglMisc) \
     V(webglQueries) \
     V(webglSamplers) \

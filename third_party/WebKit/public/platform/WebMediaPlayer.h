@@ -169,6 +169,8 @@ public:
 
     virtual void paint(WebCanvas*, const WebRect&, unsigned char alpha, SkXfermode::Mode) = 0;
 
+    virtual bool bindVideoTextureToPlatformTexture(gpu::gles2::GLES2Interface*, unsigned texture) { return false; }
+
     // TODO(dshwang): remove non-|target| version. crbug.com/349871
     virtual bool copyVideoTextureToPlatformTexture(gpu::gles2::GLES2Interface*, unsigned texture, unsigned internalFormat, unsigned type, bool premultiplyAlpha, bool flipY) { return false; }
 

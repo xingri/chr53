@@ -93,6 +93,7 @@ namespace gles2 {
 namespace {
 
 const char kOESDerivativeExtension[] = "GL_OES_standard_derivatives";
+const char kOESEGLImageExternalExtension[] = "GL_OES_EGL_image_external";
 const char kEXTFragDepthExtension[] = "GL_EXT_frag_depth";
 const char kEXTDrawBuffersExtension[] = "GL_EXT_draw_buffers";
 const char kEXTShaderTextureLodExtension[] = "GL_EXT_shader_texture_lod";
@@ -2192,6 +2193,7 @@ class GLES2DecoderImpl : public GLES2Decoder, public ErrorStateClient {
   // contexts may be broken.  These flags override the shared state to preserve
   // WebGL semantics.
   bool derivatives_explicitly_enabled_;
+  bool egl_image_external_explicitly_enabled_;
   bool frag_depth_explicitly_enabled_;
   bool draw_buffers_explicitly_enabled_;
   bool shader_texture_lod_explicitly_enabled_;
@@ -2880,6 +2882,7 @@ GLES2DecoderImpl::GLES2DecoderImpl(ContextGroup* group)
       supports_commit_overlay_planes_(false),
       supports_async_swap_(false),
       derivatives_explicitly_enabled_(false),
+      egl_image_external_explicitly_enabled_(false),
       frag_depth_explicitly_enabled_(false),
       draw_buffers_explicitly_enabled_(false),
       shader_texture_lod_explicitly_enabled_(false),
@@ -3617,6 +3620,7 @@ bool GLES2DecoderImpl::InitializeShaderTranslator() {
     case CONTEXT_TYPE_WEBGL1:
       shader_spec = SH_WEBGL_SPEC;
       resources.OES_standard_derivatives = derivatives_explicitly_enabled_;
+      resources.OES_EGL_image_external = egl_image_external_explicitly_enabled_;
       resources.EXT_frag_depth = frag_depth_explicitly_enabled_;
       resources.EXT_draw_buffers = draw_buffers_explicitly_enabled_;
       if (!draw_buffers_explicitly_enabled_)
@@ -11059,6 +11063,13 @@ error::Error GLES2DecoderImpl::HandleGetString(uint32_t immediate_data_size,
                                  std::string());
             }
           }
+          if (!egl_image_external_explicitly_enabled_) {
+            size_t offset = extensions.find(kOESEGLImageExternalExtension);
+            if (std::string::npos != offset) {
+              extensions.replace(offset, arraysize(kOESEGLImageExternalExtension),
+                                 std::string());
+            }
+          }
           if (!frag_depth_explicitly_enabled_) {
             size_t offset = extensions.find(kEXTFragDepthExtension);
             if (std::string::npos != offset) {
@@ -13589,12 +13600,15 @@ error::Error GLES2DecoderImpl::HandleRequestExtensionCHROMIUM(
   feature_str = feature_str + " ";
 
   bool desire_standard_derivatives = false;
+  bool desire_egl_image_external = false;
   bool desire_frag_depth = false;
   bool desire_draw_buffers = false;
   bool desire_shader_texture_lod = false;
   if (feature_info_->context_type() == CONTEXT_TYPE_WEBGL1) {
     desire_standard_derivatives =
         feature_str.find("GL_OES_standard_derivatives ") != std::string::npos;
+    desire_egl_image_external =
+        feature_str.find("GL_OES_EGL_image_external ") != std::string::npos;
     desire_frag_depth =
         feature_str.find("GL_EXT_frag_depth ") != std::string::npos;
     desire_draw_buffers =
@@ -13603,10 +13617,12 @@ error::Error GLES2DecoderImpl::HandleRequestExtensionCHROMIUM(
         feature_str.find("GL_EXT_shader_texture_lod ") != std::string::npos;
   }
   if (desire_standard_derivatives != derivatives_explicitly_enabled_ ||
+      desire_egl_image_external != egl_image_external_explicitly_enabled_ ||
       desire_frag_depth != frag_depth_explicitly_enabled_ ||
       desire_draw_buffers != draw_buffers_explicitly_enabled_ ||
       desire_shader_texture_lod != shader_texture_lod_explicitly_enabled_) {
     derivatives_explicitly_enabled_ |= desire_standard_derivatives;
+    egl_image_external_explicitly_enabled_ |= desire_egl_image_external;
     frag_depth_explicitly_enabled_ |= desire_frag_depth;
     draw_buffers_explicitly_enabled_ |= desire_draw_buffers;
     shader_texture_lod_explicitly_enabled_ |= desire_shader_texture_lod;

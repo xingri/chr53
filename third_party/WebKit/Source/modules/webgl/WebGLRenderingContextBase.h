@@ -78,6 +78,7 @@ class ImageBitmap;
 class ImageBuffer;
 class ImageData;
 class IntSize;
+class OESEGLImageExternal;
 class OESElementIndexUint;
 class OESStandardDerivatives;
 class OESTextureFloat;
@@ -403,6 +404,7 @@ public:
     public:
         Member<WebGLTexture> m_texture2DBinding;
         Member<WebGLTexture> m_textureCubeMapBinding;
+        Member<WebGLTexture> m_textureExternalOESBinding;
         Member<WebGLTexture> m_texture3DBinding;
         Member<WebGLTexture> m_texture2DArrayBinding;
 
@@ -418,6 +420,7 @@ protected:
     friend class WebGLFramebuffer;
     friend class WebGLObject;
     friend class WebGLContextObject;
+    friend class OESEGLImageExternal;
     friend class OESVertexArrayObject;
     friend class WebGLDebugShaders;
     friend class WebGLCompressedTextureASTC;
@@ -543,12 +546,14 @@ protected:
 
     GLint m_maxTextureSize;
     GLint m_maxCubeMapTextureSize;
+    GLint m_maxExternalOESTextureSize;
     GLint m_max3DTextureSize;
     GLint m_maxArrayTextureLayers;
     GLint m_maxRenderbufferSize;
     GLint m_maxViewportDims[2];
     GLint m_maxTextureLevel;
     GLint m_maxCubeMapTextureLevel;
+    GLint m_maxExternalOESTextureLevel;
     GLint m_max3DTextureLevel;
 
     GLint m_maxDrawBuffers;
@@ -772,7 +777,8 @@ protected:
         TexImage,
         TexSubImage,
         CopyTexImage,
-        CompressedTexImage
+        CompressedTexImage,
+        BindTexImage
     };
     enum TexImageFunctionID {
         TexImage2D,
@@ -1052,6 +1058,7 @@ protected:
     ScopedPersistent<v8::Array> m_2DArrayTextureWrappers;
     ScopedPersistent<v8::Array> m_3DTextureWrappers;
     ScopedPersistent<v8::Array> m_cubeMapTextureWrappers;
+    ScopedPersistent<v8::Array> m_externalOESTextureWrappers;
     ScopedPersistent<v8::Array> m_extensionWrappers;
 
     // The "catch-all" array for the rest of the preserved object

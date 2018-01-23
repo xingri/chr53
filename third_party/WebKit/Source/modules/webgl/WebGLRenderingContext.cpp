@@ -39,6 +39,7 @@
 #include "modules/webgl/EXTShaderTextureLOD.h"
 #include "modules/webgl/EXTTextureFilterAnisotropic.h"
 #include "modules/webgl/EXTsRGB.h"
+#include "modules/webgl/OESEGLImageExternal.h"
 #include "modules/webgl/OESElementIndexUint.h"
 #include "modules/webgl/OESStandardDerivatives.h"
 #include "modules/webgl/OESTextureFloat.h"
@@ -163,6 +164,7 @@ void WebGLRenderingContext::registerContextExtensions()
     registerExtension<EXTShaderTextureLOD>(m_extShaderTextureLOD);
     registerExtension<EXTsRGB>(m_extsRGB);
     registerExtension<EXTTextureFilterAnisotropic>(m_extTextureFilterAnisotropic, ApprovedExtension, bothPrefixes);
+    registerExtension<OESEGLImageExternal>(m_oesEGLImageExternal);
     registerExtension<OESElementIndexUint>(m_oesElementIndexUint);
     registerExtension<OESStandardDerivatives>(m_oesStandardDerivatives);
     registerExtension<OESTextureFloat>(m_oesTextureFloat);
@@ -198,6 +200,7 @@ DEFINE_TRACE(WebGLRenderingContext)
     visitor->trace(m_oesStandardDerivatives);
     visitor->trace(m_oesVertexArrayObject);
     visitor->trace(m_oesElementIndexUint);
+    visitor->trace(m_oesEGLImageExternal);
     visitor->trace(m_webglLoseContext);
     visitor->trace(m_webglDebugRendererInfo);
     visitor->trace(m_webglDebugShaders);
@@ -227,6 +230,7 @@ DEFINE_TRACE_WRAPPERS(WebGLRenderingContext)
     visitor->traceWrappers(m_oesStandardDerivatives);
     visitor->traceWrappers(m_oesVertexArrayObject);
     visitor->traceWrappers(m_oesElementIndexUint);
+    visitor->traceWrappers(m_oesEGLImageExternal);
     visitor->traceWrappers(m_webglLoseContext);
     visitor->traceWrappers(m_webglDebugRendererInfo);
     visitor->traceWrappers(m_webglDebugShaders);

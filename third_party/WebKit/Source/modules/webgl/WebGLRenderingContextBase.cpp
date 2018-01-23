@@ -52,6 +52,7 @@
 #include "modules/webgl/EXTShaderTextureLOD.h"
 #include "modules/webgl/EXTTextureFilterAnisotropic.h"
 #include "modules/webgl/GLStringQuery.h"
+#include "modules/webgl/OESEGLImageExternal.h"
 #include "modules/webgl/OESElementIndexUint.h"
 #include "modules/webgl/OESStandardDerivatives.h"
 #include "modules/webgl/OESTextureFloat.h"
@@ -1003,6 +1004,9 @@ void WebGLRenderingContextBase::initializeNewContext()
     m_maxTextureLevel = WebGLTexture::computeLevelCount(m_maxTextureSize, m_maxTextureSize, 1);
     m_maxCubeMapTextureSize = 0;
     contextGL()->GetIntegerv(GL_MAX_CUBE_MAP_TEXTURE_SIZE, &m_maxCubeMapTextureSize);
+    m_maxExternalOESTextureSize = 0;
+    contextGL()->GetIntegerv(GL_MAX_TEXTURE_SIZE, &m_maxExternalOESTextureSize);
+    m_maxExternalOESTextureLevel = 1;
     m_max3DTextureSize = 0;
     m_max3DTextureLevel = 0;
     m_maxArrayTextureLayers = 0;
@@ -1128,6 +1132,7 @@ WebGLRenderingContextBase::~WebGLRenderingContextBase()
     for (size_t i = 0; i < m_textureUnits.size(); ++i) {
         m_textureUnits[i].m_texture2DBinding = nullptr;
         m_textureUnits[i].m_textureCubeMapBinding = nullptr;
+        m_textureUnits[i].m_textureExternalOESBinding = nullptr;
         m_textureUnits[i].m_texture3DBinding = nullptr;
         m_textureUnits[i].m_texture2DArrayBinding = nullptr;
     }
@@ -1571,6 +1576,17 @@ void WebGLRenderingContextBase::bindTexture(ScriptState* scriptState, GLenum tar
         if (scriptState) {
             hiddenValueName = V8HiddenValue::webglCubeMapTextures(scriptState->isolate());
             persistentCache = &m_cubeMapTextureWrappers;
+        }
+    } else if (target == GL_TEXTURE_EXTERNAL_OES) {
+        if (!extensionEnabled(OESEGLImageExternalName)) {
+            synthesizeGLError(GL_INVALID_ENUM, "bindTexture", "invalid target, OES_EGL_image_external not enabled");
+            return;
+        }
+
+        m_textureUnits[m_activeTextureUnit].m_textureExternalOESBinding = texture;
+        if (scriptState) {
+            hiddenValueName = V8HiddenValue::webglExternalOESTextures(scriptState->isolate());
+            persistentCache = &m_externalOESTextureWrappers;
         }
     } else if (isWebGL2OrHigher() && target == GL_TEXTURE_2D_ARRAY) {
         m_textureUnits[m_activeTextureUnit].m_texture2DArrayBinding = texture;
@@ -2096,6 +2112,10 @@ void WebGLRenderingContextBase::deleteTexture(WebGLTexture* texture)
         }
         if (texture == m_textureUnits[i].m_textureCubeMapBinding) {
             m_textureUnits[i].m_textureCubeMapBinding = nullptr;
+            maxBoundTextureIndex = i;
+        }
+        if (texture == m_textureUnits[i].m_textureExternalOESBinding) {
+            m_textureUnits[i].m_textureExternalOESBinding = nullptr;
             maxBoundTextureIndex = i;
         }
         if (isWebGL2OrHigher()) {
@@ -2928,6 +2948,11 @@ ScriptValue WebGLRenderingContextBase::getParameter(ScriptState* scriptState, GL
             return getBooleanParameter(scriptState, GL_GPU_DISJOINT_EXT);
         synthesizeGLError(GL_INVALID_ENUM, "getParameter", "invalid parameter name, EXT_disjoint_timer_query not enabled");
         return ScriptValue::createNull(scriptState);
+    case GL_TEXTURE_BINDING_EXTERNAL_OES:  // OES_EGL_image_external
+        if (extensionEnabled(OESEGLImageExternalName))
+            return WebGLAny(scriptState, m_textureUnits[m_activeTextureUnit].m_textureExternalOESBinding.get());
+        synthesizeGLError(GL_INVALID_ENUM, "getParameter", "invalid parameter name, OES_EGL_image_external not enabled");
+        return ScriptValue::createNull(scriptState);
 
     default:
         if ((extensionEnabled(WebGLDrawBuffersName) || isWebGL2OrHigher())
@@ -3140,6 +3165,14 @@ ScriptValue WebGLRenderingContextBase::getTexParameter(ScriptState* scriptState,
         }
         synthesizeGLError(GL_INVALID_ENUM, "getTexParameter", "invalid parameter name, EXT_texture_filter_anisotropic not enabled");
         return ScriptValue::createNull(scriptState);
+    case GL_REQUIRED_TEXTURE_IMAGE_UNITS_OES: // OES_EGL_image_external
+        if (extensionEnabled(OESEGLImageExternalName)) {
+            GLfloat value = 0.f;
+            contextGL()->GetTexParameterfv(target, pname, &value);
+            return WebGLAny(scriptState, value);
+        }
+        synthesizeGLError(GL_INVALID_ENUM, "getTexParameter", "invalid parameter name, OES_EGL_image_external not enabled");
+        return ScriptValue::createNull(scriptState);
     default:
         synthesizeGLError(GL_INVALID_ENUM, "getTexParameter", "invalid parameter name");
         return ScriptValue::createNull(scriptState);
@@ -3261,6 +3294,14 @@ ScriptValue WebGLRenderingContextBase::getUniform(ScriptState* scriptState, WebG
                     break;
                 case GL_SAMPLER_2D:
                 case GL_SAMPLER_CUBE:
+                    baseType = GL_INT;
+                    length = 1;
+                    break;
+                case GL_SAMPLER_EXTERNAL_OES:
+                    if (!extensionEnabled(OESEGLImageExternalName)) {
+                        synthesizeGLError(GL_INVALID_VALUE, "getUniform", "unhandled type, OES_EGL_image_external not enabled");
+                        return ScriptValue::createNull(scriptState);
+                    }
                     baseType = GL_INT;
                     length = 1;
                     break;
@@ -4598,6 +4639,24 @@ void WebGLRenderingContextBase::texParameter(GLenum target, GLenum pname, GLfloa
         synthesizeGLError(GL_INVALID_ENUM, "texParameter", "invalid parameter name");
         return;
     }
+    if (target == GL_TEXTURE_EXTERNAL_OES) {
+        switch (pname) {
+        case GL_TEXTURE_MIN_FILTER:
+            if ((isFloat && paramf != GL_NEAREST && paramf != GL_LINEAR)
+                || (!isFloat && parami != GL_NEAREST && parami != GL_LINEAR)) {
+                synthesizeGLError(GL_INVALID_ENUM, "texParameter", "invalid parameter name");
+                return;
+            }
+            break;
+        case GL_TEXTURE_WRAP_S:
+        case GL_TEXTURE_WRAP_T:
+            if ((isFloat && paramf != GL_CLAMP_TO_EDGE) || (!isFloat && parami != GL_CLAMP_TO_EDGE)) {
+                synthesizeGLError(GL_INVALID_ENUM, "texParameter", "invalid parameter name");
+                return;
+            }
+            break;
+        }
+    }
     if (isFloat) {
         contextGL()->TexParameterf(target, pname, paramf);
     } else {
@@ -5416,6 +5475,13 @@ WebGLTexture* WebGLRenderingContextBase::validateTextureBinding(const char* func
     case GL_TEXTURE_CUBE_MAP:
         tex = m_textureUnits[m_activeTextureUnit].m_textureCubeMapBinding.get();
         break;
+    case GL_TEXTURE_EXTERNAL_OES:
+        if (!extensionEnabled(OESEGLImageExternalName)) {
+            synthesizeGLError(GL_INVALID_ENUM, functionName, "invalid texture target");
+            return nullptr;
+        }
+        tex = m_textureUnits[m_activeTextureUnit].m_textureExternalOESBinding.get();
+        break;
     case GL_TEXTURE_3D:
         if (!isWebGL2OrHigher()) {
             synthesizeGLError(GL_INVALID_ENUM, functionName, "invalid texture target");
@@ -5546,6 +5612,8 @@ GLint WebGLRenderingContextBase::getMaxTextureLevelForTarget(GLenum target)
     case GL_TEXTURE_CUBE_MAP_POSITIVE_Z:
     case GL_TEXTURE_CUBE_MAP_NEGATIVE_Z:
         return m_maxCubeMapTextureLevel;
+    case GL_TEXTURE_EXTERNAL_OES:
+        return m_maxExternalOESTextureLevel;
     }
     return 0;
 }
@@ -5595,6 +5663,12 @@ bool WebGLRenderingContextBase::validateTexFuncDimensions(const char* functionNa
         // For texSubImage that will be checked when checking yoffset + height is in range.
         if (width > (m_maxCubeMapTextureSize >> level)) {
             synthesizeGLError(GL_INVALID_VALUE, functionName, "width or height out of range for cube map");
+            return false;
+        }
+        break;
+    case GL_TEXTURE_EXTERNAL_OES:
+        if (width > (m_maxExternalOESTextureSize >> level) || height > (m_maxExternalOESTextureSize >> level)) {
+            synthesizeGLError(GL_INVALID_VALUE, functionName, "width or height out of range");
             return false;
         }
         break;
@@ -6336,7 +6410,8 @@ void WebGLRenderingContextBase::findNewMaxNonDefaultTextureUnit()
     int startIndex = m_onePlusMaxNonDefaultTextureUnit - 1;
     for (int i = startIndex; i >= 0; --i) {
         if (m_textureUnits[i].m_texture2DBinding
-            || m_textureUnits[i].m_textureCubeMapBinding) {
+            || m_textureUnits[i].m_textureCubeMapBinding
+            || m_textureUnits[i].m_textureExternalOESBinding) {
             m_onePlusMaxNonDefaultTextureUnit = i + 1;
             return;
         }
@@ -6389,6 +6464,7 @@ DEFINE_TRACE(WebGLRenderingContextBase::TextureUnitState)
 {
     visitor->trace(m_texture2DBinding);
     visitor->trace(m_textureCubeMapBinding);
+    visitor->trace(m_textureExternalOESBinding);
     visitor->trace(m_texture3DBinding);
     visitor->trace(m_texture2DArrayBinding);
 }

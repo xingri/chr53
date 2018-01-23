@@ -17,6 +17,7 @@ enum WebGLExtensionName {
     EXTShaderTextureLODName,
     EXTsRGBName,
     EXTTextureFilterAnisotropicName,
+    OESEGLImageExternalName,
     OESElementIndexUintName,
     OESStandardDerivativesName,
     OESTextureFloatLinearName,
