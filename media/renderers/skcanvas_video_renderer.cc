@@ -642,6 +642,28 @@ void SkCanvasVideoRenderer::ConvertVideoFrameToRGBPixels(
 }
 
 // static
+void SkCanvasVideoRenderer::BindVideoFrameSingleTextureToGLTexture(
+    gpu::gles2::GLES2Interface* gl,
+    VideoFrame* video_frame,
+    unsigned int texture) {
+  DCHECK(video_frame);
+  DCHECK(video_frame->HasTextures());
+
+  const gpu::MailboxHolder& mailbox_holder = video_frame->mailbox_holder(0);
+  DCHECK(mailbox_holder.texture_target == GL_TEXTURE_EXTERNAL_OES);
+
+  gl->WaitSyncTokenCHROMIUM(mailbox_holder.sync_token.GetConstData());
+
+  gl->BindTexture(mailbox_holder.texture_target, texture);
+  gl->ConsumeTextureCHROMIUM(mailbox_holder.texture_target,
+                             mailbox_holder.mailbox.name);
+  gl->Flush();
+
+  SyncTokenClientImpl client(gl);
+  video_frame->UpdateReleaseSyncToken(&client);
+}
+
+// static
 void SkCanvasVideoRenderer::CopyVideoFrameSingleTextureToGLTexture(
     gpu::gles2::GLES2Interface* gl,
     VideoFrame* video_frame,

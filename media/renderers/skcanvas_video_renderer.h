@@ -66,6 +66,13 @@ class MEDIA_EXPORT SkCanvasVideoRenderer {
                                            void* rgb_pixels,
                                            size_t row_bytes);
 
+  // Bind the contents of texture of |video_frame| to texture |texture|.
+  // The format of |video_frame| must be VideoFrame::NATIVE_TEXTURE.
+  static void BindVideoFrameSingleTextureToGLTexture(
+      gpu::gles2::GLES2Interface* gl,
+      VideoFrame* video_frame,
+      unsigned int texture);
+
   // Copy the contents of texture of |video_frame| to texture |texture|.
   // |level|, |internal_format|, |type| specify target texture |texture|.
   // The format of |video_frame| must be VideoFrame::NATIVE_TEXTURE.
